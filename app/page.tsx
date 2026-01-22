@@ -5,7 +5,8 @@ import type { ListingWithImages, ShortWithListing } from '@/lib/types/database'
 export default async function HomePage() {
   const supabase = await createClient()
 
-  const [{ data: listings }, { data: shorts }] = await Promise.all([
+  const [{ data: { user } }, { data: listings }, { data: shorts }] = await Promise.all([
+    supabase.auth.getUser(),
     supabase
       .from('listings')
       .select(`
@@ -25,14 +26,31 @@ export default async function HomePage() {
       .limit(10)
   ])
 
+  let profile = null
+  if (user) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('display_name, avatar_url')
+      .eq('id', user.id)
+      .single()
+    profile = data
+  }
+
   const randomShort = shorts && shorts.length > 0
     ? shorts[Math.floor(Math.random() * shorts.length)] as ShortWithListing
     : null
+
+  const userInfo = user ? {
+    email: user.email!,
+    displayName: profile?.display_name,
+    avatarUrl: profile?.avatar_url,
+  } : null
 
   return (
     <HomeContent
       listings={listings as ListingWithImages[] | null}
       randomShort={randomShort}
+      user={userInfo}
     />
   )
 }

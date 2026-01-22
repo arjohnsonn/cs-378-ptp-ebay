@@ -5,17 +5,25 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ListingCard } from '@/components/listing-card'
 import { ShortPreview } from '@/components/short-preview'
+import { UserDropdown } from '@/components/user-dropdown'
 import { FadeIn, FadeInView, SlideIn, motion } from '@/components/motion'
 import { Search, Clapperboard, ChevronRight, Package } from 'lucide-react'
 import { categories } from '@/lib/constants/categories'
 import type { ListingWithImages, ShortWithListing } from '@/lib/types/database'
 
+interface UserInfo {
+  email: string
+  displayName?: string | null
+  avatarUrl?: string | null
+}
+
 interface HomeContentProps {
   listings: ListingWithImages[] | null
   randomShort: ShortWithListing | null
+  user: UserInfo | null
 }
 
-export function HomeContent({ listings, randomShort }: HomeContentProps) {
+export function HomeContent({ listings, randomShort, user }: HomeContentProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -49,9 +57,17 @@ export function HomeContent({ listings, randomShort }: HomeContentProps) {
                   <span className="hidden md:inline">Shorts</span>
                 </Link>
               </Button>
-              <Button asChild size="sm" className="rounded-full px-5">
-                <Link href="/sell">Start Selling</Link>
-              </Button>
+              {user ? (
+                <UserDropdown
+                  email={user.email}
+                  displayName={user.displayName}
+                  avatarUrl={user.avatarUrl}
+                />
+              ) : (
+                <Button asChild size="sm" className="rounded-full px-5">
+                  <Link href="/sell">Start Selling</Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -86,7 +102,7 @@ export function HomeContent({ listings, randomShort }: HomeContentProps) {
                     <Link href="/shorts">Watch Shorts</Link>
                   </Button>
                   <Button asChild variant="outline" size="lg" className="rounded-full px-8 h-12 text-base">
-                    <Link href="/sell">Become a Seller</Link>
+                    <Link href="/sell">{user ? 'Seller Dashboard' : 'Become a Seller'}</Link>
                   </Button>
                 </div>
               </FadeIn>

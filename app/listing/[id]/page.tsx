@@ -4,7 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ImageCarousel } from '@/components/image-carousel'
-import type { ListingImage, Profile } from '@/lib/types/database'
+import { getCategoryBySlug, getConditionBySlug } from '@/lib/constants/categories'
+import { ArrowLeft, Tag, Sparkles, User, Calendar, Shield } from 'lucide-react'
+import type { ListingImage, Profile, ListingCategory, ListingCondition } from '@/lib/types/database'
 
 interface ListingPageProps {
   params: Promise<{ id: string }>
@@ -40,55 +42,141 @@ export default async function ListingPage({ params, searchParams }: ListingPageP
   const images = (listing.images || []) as ListingImage[]
   const seller = (Array.isArray(listing.seller) ? listing.seller[0] : listing.seller) as Profile | null
 
+  const category = listing.category ? getCategoryBySlug(listing.category as ListingCategory) : null
+  const condition = listing.condition ? getConditionBySlug(listing.condition as ListingCondition) : null
+  const CategoryIcon = category?.icon
+
+  const createdDate = new Date(listing.created_at).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  })
+
   return (
-    <div className="min-h-screen">
-      <header className="border-b">
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 glass border-b border-border/50">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-4">
+          <Link href="/browse" className="text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
           <Link href="/" className="font-bold text-xl text-primary">Shortlist</Link>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid gap-8 lg:grid-cols-2">
+          {/* Images */}
           <div>
             <ImageCarousel images={images} title={listing.title} />
           </div>
 
+          {/* Details */}
           <div className="space-y-6">
+            {/* Category Badge */}
+            {category && (
+              <Link href={`/category/${category.slug}`}>
+                <Badge variant="secondary" className="gap-1.5 hover:bg-secondary/80 transition-colors">
+                  {CategoryIcon && <CategoryIcon className="w-3 h-3" />}
+                  {category.name}
+                </Badge>
+              </Link>
+            )}
+
+            {/* Title & Price */}
             <div>
-              <h1 className="text-3xl font-bold">{listing.title}</h1>
-              <p className="text-4xl font-bold mt-2">${price}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold">{listing.title}</h1>
+              <p className="text-3xl sm:text-4xl font-bold text-primary mt-2">${price}</p>
               {listing.status === 'SOLD' && (
-                <Badge variant="secondary" className="mt-2">SOLD</Badge>
+                <Badge variant="secondary" className="mt-3 bg-foreground text-background">SOLD</Badge>
               )}
             </div>
 
-            {listing.description && (
-              <div>
-                <h2 className="font-semibold mb-2">Description</h2>
-                <p className="text-muted-foreground whitespace-pre-wrap">{listing.description}</p>
-              </div>
-            )}
-
-            {seller && (
-              <div>
-                <h2 className="font-semibold mb-2">Seller</h2>
-                <p className="text-muted-foreground">{seller.display_name || seller.email}</p>
-              </div>
-            )}
-
+            {/* Error Message */}
             {error && errorMessages[error] && (
-              <div className="p-4 text-sm text-destructive bg-destructive/10 rounded-lg border border-destructive/20">
+              <div className="p-4 text-sm text-destructive bg-destructive/10 rounded-xl border border-destructive/20">
                 {errorMessages[error]}
               </div>
             )}
 
+            {/* Buy Button */}
             {listing.status === 'ACTIVE' && (
               <form action={`/api/checkout?listing=${listing.id}`} method="POST">
-                <Button type="submit" size="lg" className="w-full">
-                  Buy Now - ${price}
+                <Button type="submit" size="lg" className="w-full h-14 text-lg rounded-xl">
+                  Buy Now
                 </Button>
               </form>
+            )}
+
+            {/* Quick Info Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {condition && (
+                <div className="bg-card border border-border/50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-xs uppercase tracking-wide">Condition</span>
+                  </div>
+                  <p className="font-semibold">{condition.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{condition.description}</p>
+                </div>
+              )}
+
+              {category && (
+                <div className="bg-card border border-border/50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <Tag className="w-4 h-4" />
+                    <span className="text-xs uppercase tracking-wide">Category</span>
+                  </div>
+                  <p className="font-semibold">{category.name}</p>
+                </div>
+              )}
+
+              <div className="bg-card border border-border/50 rounded-xl p-4">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-xs uppercase tracking-wide">Listed</span>
+                </div>
+                <p className="font-semibold text-sm">{createdDate}</p>
+              </div>
+
+              <div className="bg-card border border-border/50 rounded-xl p-4">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <Shield className="w-4 h-4" />
+                  <span className="text-xs uppercase tracking-wide">Protection</span>
+                </div>
+                <p className="font-semibold text-sm">Buyer Protected</p>
+              </div>
+            </div>
+
+            {/* Description */}
+            {listing.description && (
+              <div className="bg-card border border-border/50 rounded-xl p-5">
+                <h2 className="font-semibold mb-3">Description</h2>
+                <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                  {listing.description}
+                </p>
+              </div>
+            )}
+
+            {/* Seller Info */}
+            {seller && (
+              <div className="bg-card border border-border/50 rounded-xl p-5">
+                <h2 className="font-semibold mb-3">Seller</h2>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    {seller.avatar_url ? (
+                      <img src={seller.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      <User className="w-5 h-5 text-primary" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium">{seller.display_name || seller.email?.split('@')[0]}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Member since {new Date(seller.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
