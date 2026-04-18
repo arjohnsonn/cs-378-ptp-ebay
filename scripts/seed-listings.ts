@@ -9,10 +9,10 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 const testSellers = [
-  { email: 'seller1@test.local', displayName: 'VintageFinds' },
-  { email: 'seller2@test.local', displayName: 'TechDeals' },
-  { email: 'seller3@test.local', displayName: 'HomeGoods' },
-  { email: 'seller4@test.local', displayName: 'StyleShop' },
+  { email: 'seller1@example.com', displayName: 'VintageFinds' },
+  { email: 'seller2@example.com', displayName: 'TechDeals' },
+  { email: 'seller3@example.com', displayName: 'HomeGoods' },
+  { email: 'seller4@example.com', displayName: 'StyleShop' },
 ]
 
 const sampleListings = [

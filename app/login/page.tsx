@@ -1,17 +1,21 @@
 'use client'
 
 import { useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { signInWithOtp } from '@/lib/actions/auth'
+import { signInWithOtp, signInWithPassword } from '@/lib/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 export default function LoginPage() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const error = searchParams.get('error')
+  const redirect = searchParams.get('redirect') || '/'
 
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [usePassword, setUsePassword] = useState(false)
   const [pending, setPending] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(
     error === 'auth' ? 'Authentication failed. Please try again.' : null
@@ -25,6 +29,19 @@ export default function LoginPage() {
 
     const formData = new FormData()
     formData.set('email', email)
+
+    if (usePassword) {
+      formData.set('password', password)
+      const result = await signInWithPassword(formData)
+      setPending(false)
+      if (result.error) {
+        setErrorMessage(result.error)
+        return
+      }
+      router.push(redirect)
+      router.refresh()
+      return
+    }
 
     const result = await signInWithOtp(formData)
     setPending(false)
@@ -146,18 +163,45 @@ export default function LoginPage() {
                   />
                 </div>
 
+                {usePassword && (
+                  <div className="space-y-2 animate-in">
+                    <label htmlFor="password" className="text-sm font-medium">
+                      Password
+                    </label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      disabled={pending}
+                      className="h-12 px-4 bg-secondary/50 border-0 rounded-xl focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                )}
+
                 <Button
                   type="submit"
                   disabled={pending}
                   className="w-full h-12 text-base font-semibold rounded-xl bg-primary hover:bg-primary/90 transition-all duration-200 hover:shadow-lg hover:shadow-primary/25"
                 >
-                  {pending ? 'Sending...' : 'Continue with Email'}
+                  {pending ? (usePassword ? 'Signing in...' : 'Sending...') : usePassword ? 'Sign in' : 'Continue with Email'}
                 </Button>
               </form>
 
+              <button
+                type="button"
+                onClick={() => setUsePassword((v) => !v)}
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
+              >
+                {usePassword ? 'Use magic link instead' : 'Sign in with password'}
+              </button>
+
               <p className="text-center text-sm text-muted-foreground">
-                We&apos;ll send you a magic link to sign in instantly.
-                <br />No password needed.
+                {usePassword
+                  ? 'Use your account password to sign in.'
+                  : "We'll send you a magic link to sign in instantly."}
               </p>
 
               <p className="text-center text-xs text-muted-foreground">
