@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { createListing, updateListing, deleteListing, uploadListingImage, deleteListingImage } from '@/lib/actions/listings'
 import { categories, conditions } from '@/lib/constants/categories'
 import type { ListingWithImages } from '@/lib/types/database'
@@ -20,6 +21,7 @@ export function ListingForm({ listing }: ListingFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const [uploadingImages, setUploadingImages] = useState(false)
+  const [acceptsOffers, setAcceptsOffers] = useState(listing?.accepts_offers ?? false)
   const [localImages, setLocalImages] = useState<{ id: string; url: string; file?: File }[]>(
     listing?.images?.map(img => ({ id: img.id, url: img.url })) || []
   )
@@ -332,6 +334,47 @@ export function ListingForm({ listing }: ListingFormProps) {
               <option value="ACTIVE">Active (visible to buyers)</option>
             </select>
           </div>
+        </div>
+
+        <div className="space-y-3 pt-2 border-t border-border/50">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="accepts_offers"
+              name="accepts_offers"
+              checked={acceptsOffers}
+              onCheckedChange={(checked) => setAcceptsOffers(checked === true)}
+              className="mt-1"
+            />
+            <div className="flex-1">
+              <Label htmlFor="accepts_offers" className="font-medium cursor-pointer">
+                Accept offers
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Let buyers negotiate below your asking price.
+              </p>
+            </div>
+          </div>
+          {acceptsOffers && (
+            <div className="space-y-2 pl-7">
+              <Label htmlFor="min_offer">Minimum offer (optional)</Label>
+              <div className="relative max-w-[200px]">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  id="min_offer"
+                  name="min_offer"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue={listing?.min_offer_cents ? (listing.min_offer_cents / 100).toFixed(2) : ''}
+                  placeholder="0.00"
+                  className="h-10 pl-8 pr-4 bg-secondary/30 border-0 rounded-xl"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Offers below this are auto-rejected at submission.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

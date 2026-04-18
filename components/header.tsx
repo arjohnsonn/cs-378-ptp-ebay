@@ -54,6 +54,9 @@ export async function Header() {
                 <DropdownMenuItem asChild>
                   <Link href="/orders">My Orders</Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/offers">Offers</Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <form action={signOut}>

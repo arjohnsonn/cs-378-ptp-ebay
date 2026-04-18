@@ -13,7 +13,24 @@ const listingSchema = z.object({
   status: z.enum(['DRAFT', 'ACTIVE']).default('DRAFT'),
   category: z.enum(['electronics', 'fashion', 'home', 'sports', 'collectibles', 'art', 'books', 'music', 'toys', 'other']).default('other'),
   condition: z.enum(['new', 'like_new', 'good', 'fair', 'poor']).default('good'),
+  acceptsOffers: z.boolean().default(false),
+  minOffer: z.number().min(0).optional(),
 })
+
+function parseListingForm(formData: FormData) {
+  const minOfferRaw = formData.get('min_offer')
+  const minOffer = minOfferRaw ? parseFloat(minOfferRaw as string) : undefined
+  return listingSchema.safeParse({
+    title: formData.get('title'),
+    description: formData.get('description') || undefined,
+    price: parseFloat(formData.get('price') as string),
+    status: formData.get('status') || 'DRAFT',
+    category: formData.get('category') || 'other',
+    condition: formData.get('condition') || 'good',
+    acceptsOffers: formData.get('accepts_offers') === 'on',
+    minOffer: minOffer && !isNaN(minOffer) ? minOffer : undefined,
+  })
+}
 
 export async function createListing(formData: FormData) {
   const supabase = await createClient()
@@ -23,14 +40,7 @@ export async function createListing(formData: FormData) {
     return { error: 'Not authenticated' }
   }
 
-  const parsed = listingSchema.safeParse({
-    title: formData.get('title'),
-    description: formData.get('description') || undefined,
-    price: parseFloat(formData.get('price') as string),
-    status: formData.get('status') || 'DRAFT',
-    category: formData.get('category') || 'other',
-    condition: formData.get('condition') || 'good',
-  })
+  const parsed = parseListingForm(formData)
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message }
@@ -46,6 +56,10 @@ export async function createListing(formData: FormData) {
       status: parsed.data.status as ListingStatus,
       category: parsed.data.category as ListingCategory,
       condition: parsed.data.condition as ListingCondition,
+      accepts_offers: parsed.data.acceptsOffers,
+      min_offer_cents: parsed.data.acceptsOffers && parsed.data.minOffer
+        ? Math.round(parsed.data.minOffer * 100)
+        : null,
     })
     .select()
     .single()
@@ -68,14 +82,7 @@ export async function updateListing(id: string, formData: FormData) {
     return { error: 'Not authenticated' }
   }
 
-  const parsed = listingSchema.safeParse({
-    title: formData.get('title'),
-    description: formData.get('description') || undefined,
-    price: parseFloat(formData.get('price') as string),
-    status: formData.get('status') || 'DRAFT',
-    category: formData.get('category') || 'other',
-    condition: formData.get('condition') || 'good',
-  })
+  const parsed = parseListingForm(formData)
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message }
@@ -90,6 +97,10 @@ export async function updateListing(id: string, formData: FormData) {
       status: parsed.data.status as ListingStatus,
       category: parsed.data.category as ListingCategory,
       condition: parsed.data.condition as ListingCondition,
+      accepts_offers: parsed.data.acceptsOffers,
+      min_offer_cents: parsed.data.acceptsOffers && parsed.data.minOffer
+        ? Math.round(parsed.data.minOffer * 100)
+        : null,
     })
     .eq('id', id)
     .eq('seller_id', user.id)

@@ -4,6 +4,8 @@ export type ShortTargetType = 'LISTING' | 'EXTERNAL'
 export type EventType = 'SHORT_VIEW' | 'SHORT_CLICK' | 'PURCHASE_SUCCESS'
 export type ListingCategory = 'electronics' | 'fashion' | 'home' | 'sports' | 'collectibles' | 'art' | 'books' | 'music' | 'toys' | 'other'
 export type ListingCondition = 'new' | 'like_new' | 'good' | 'fair' | 'poor'
+export type OfferStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'WITHDRAWN' | 'COUNTERED' | 'EXPIRED' | 'ACCEPTED_PAID'
+export type OfferRole = 'BUYER' | 'SELLER'
 
 export interface Profile {
   id: string
@@ -23,8 +25,33 @@ export interface Listing {
   status: ListingStatus
   category: ListingCategory
   condition: ListingCondition
+  accepts_offers: boolean
+  min_offer_cents: number | null
   created_at: string
   updated_at: string
+}
+
+export interface Offer {
+  id: string
+  listing_id: string
+  buyer_id: string
+  seller_id: string
+  amount_cents: number
+  from_role: OfferRole
+  status: OfferStatus
+  parent_offer_id: string | null
+  message: string | null
+  expires_at: string
+  stripe_checkout_session_id: string | null
+  order_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface OfferWithListing extends Offer {
+  listing?: Listing & { images?: ListingImage[] }
+  buyer?: Profile
+  seller?: Profile
 }
 
 export interface ListingImage {
@@ -117,12 +144,19 @@ export type Database = {
         Insert: Omit<Event, 'id' | 'created_at'>
         Update: never
       }
+      offers: {
+        Row: Offer
+        Insert: Omit<Offer, 'id' | 'status' | 'created_at' | 'updated_at'> & { status?: OfferStatus }
+        Update: Partial<Omit<Offer, 'id' | 'listing_id' | 'buyer_id' | 'seller_id' | 'created_at'>>
+      }
     }
     Enums: {
       listing_status: ListingStatus
       order_status: OrderStatus
       short_target_type: ShortTargetType
       event_type: EventType
+      offer_status: OfferStatus
+      offer_role: OfferRole
     }
   }
 }

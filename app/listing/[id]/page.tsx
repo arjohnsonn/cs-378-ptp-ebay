@@ -4,9 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ImageCarousel } from '@/components/image-carousel'
+import { OfferPanel } from '@/components/offer-panel'
+import { SellerOffersPanel } from '@/components/seller-offers-panel'
 import { getCategoryBySlug, getConditionBySlug } from '@/lib/constants/categories'
+import { getOfferThreadForBuyer, getPendingOffersForSeller } from '@/lib/actions/offers'
 import { ArrowLeft, Tag, Sparkles, User, Calendar, Shield } from 'lucide-react'
-import type { ListingImage, Profile, ListingCategory, ListingCondition } from '@/lib/types/database'
+import type { ListingImage, Profile, ListingCategory, ListingCondition, Offer } from '@/lib/types/database'
 
 interface ListingPageProps {
   params: Promise<{ id: string }>
@@ -17,6 +20,8 @@ const errorMessages: Record<string, string> = {
   own_listing: "You can't buy your own listing",
   unavailable: "This listing is no longer available",
   order_failed: "Failed to create order. Please try again.",
+  offer_not_payable: "This offer is no longer payable.",
+  listing_unavailable: "This listing is no longer active.",
 }
 
 export default async function ListingPage({ params, searchParams }: ListingPageProps) {
@@ -37,6 +42,14 @@ export default async function ListingPage({ params, searchParams }: ListingPageP
   if (!listing || (listing.status !== 'ACTIVE' && listing.status !== 'SOLD')) {
     notFound()
   }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const isOwner = !!user && user.id === listing.seller_id
+
+  const buyerThread: Offer[] = !isOwner && user ? await getOfferThreadForBuyer(listing.id) : []
+  const latestBuyerOffer = buyerThread.length > 0 ? buyerThread[buyerThread.length - 1] : null
+
+  const sellerOffers: Offer[] = isOwner ? await getPendingOffersForSeller(listing.id) : []
 
   const price = (listing.price_cents / 100).toFixed(2)
   const images = (listing.images || []) as ListingImage[]
@@ -98,13 +111,32 @@ export default async function ListingPage({ params, searchParams }: ListingPageP
               </div>
             )}
 
-            {/* Buy Button */}
-            {listing.status === 'ACTIVE' && (
-              <form action={`/api/checkout?listing=${listing.id}`} method="POST">
-                <Button type="submit" size="lg" className="w-full h-14 text-lg rounded-xl">
-                  Buy Now
-                </Button>
-              </form>
+            {/* Buy + Offer Actions */}
+            {listing.status === 'ACTIVE' && !isOwner && (
+              <div className="space-y-3">
+                <form action={`/api/checkout?listing=${listing.id}`} method="POST">
+                  <Button type="submit" size="lg" className="w-full h-14 text-lg rounded-xl">
+                    Buy Now · ${price}
+                  </Button>
+                </form>
+                {listing.accepts_offers && (
+                  <OfferPanel
+                    listingId={listing.id}
+                    listingPriceCents={listing.price_cents}
+                    minOfferCents={listing.min_offer_cents ?? null}
+                    latestOffer={latestBuyerOffer}
+                    isAuthenticated={!!user}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Seller view */}
+            {isOwner && listing.status === 'ACTIVE' && listing.accepts_offers && (
+              <SellerOffersPanel
+                offers={sellerOffers}
+                listingPriceCents={listing.price_cents}
+              />
             )}
 
             {/* Quick Info Grid */}

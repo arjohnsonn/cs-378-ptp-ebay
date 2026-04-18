@@ -25,6 +25,7 @@ export async function POST(request: Request) {
 
     const orderId = session.metadata?.order_id
     const listingId = session.metadata?.listing_id
+    const offerId = session.metadata?.offer_id
 
     if (!orderId || !listingId) {
       return NextResponse.json({ error: 'Missing metadata' }, { status: 400 })
@@ -55,12 +56,26 @@ export async function POST(request: Request) {
       .update({ status: 'SOLD' })
       .eq('id', listingId)
 
+    if (offerId) {
+      await supabase
+        .from('offers')
+        .update({ status: 'ACCEPTED_PAID' })
+        .eq('id', offerId)
+    }
+
+    // Listing is sold — decline any other live offers (pending or accepted-but-unpaid).
+    const siblingFilter = offerId
+      ? supabase.from('offers').update({ status: 'DECLINED' }).eq('listing_id', listingId).neq('id', offerId).in('status', ['PENDING', 'ACCEPTED'])
+      : supabase.from('offers').update({ status: 'DECLINED' }).eq('listing_id', listingId).in('status', ['PENDING', 'ACCEPTED'])
+    await siblingFilter
+
     await supabase
       .from('events')
       .insert({
         event_type: 'PURCHASE_SUCCESS',
         order_id: orderId,
         listing_id: listingId,
+        metadata: offerId ? { offer_id: offerId } : null,
       })
   }
 
