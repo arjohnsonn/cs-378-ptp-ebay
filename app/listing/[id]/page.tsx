@@ -6,8 +6,11 @@ import { Badge } from '@/components/ui/badge'
 import { ImageCarousel } from '@/components/image-carousel'
 import { OfferPanel } from '@/components/offer-panel'
 import { SellerOffersPanel } from '@/components/seller-offers-panel'
+import { ReviewsList } from '@/components/reviews-list'
+import { StarRating } from '@/components/star-rating'
 import { getCategoryBySlug, getConditionBySlug } from '@/lib/constants/categories'
 import { getOfferThreadForBuyer, getPendingOffersForSeller } from '@/lib/actions/offers'
+import { getReviewsForListing, getSellerRating } from '@/lib/actions/reviews'
 import { ArrowLeft, Tag, Sparkles, User, Calendar, Shield } from 'lucide-react'
 import type { ListingImage, Profile, ListingCategory, ListingCondition, Offer } from '@/lib/types/database'
 
@@ -50,6 +53,11 @@ export default async function ListingPage({ params, searchParams }: ListingPageP
   const latestBuyerOffer = buyerThread.length > 0 ? buyerThread[buyerThread.length - 1] : null
 
   const sellerOffers: Offer[] = isOwner ? await getPendingOffersForSeller(listing.id) : []
+
+  const [listingReviews, sellerRating] = await Promise.all([
+    getReviewsForListing(listing.id),
+    getSellerRating(listing.seller_id),
+  ])
 
   const price = (listing.price_cents / 100).toFixed(2)
   const images = (listing.images || []) as ListingImage[]
@@ -201,17 +209,43 @@ export default async function ListingPage({ params, searchParams }: ListingPageP
                       <User className="w-5 h-5 text-primary" />
                     )}
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium">{seller.display_name || seller.email?.split('@')[0]}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Member since {new Date(seller.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                    </p>
+                    {sellerRating && sellerRating.rating_count > 0 ? (
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <StarRating value={sellerRating.rating_avg} readOnly size="sm" />
+                        <span className="text-sm text-muted-foreground">
+                          {sellerRating.rating_avg.toFixed(1)} · {sellerRating.rating_count}{' '}
+                          {sellerRating.rating_count === 1 ? 'review' : 'reviews'}
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Member since {new Date(seller.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
             )}
           </div>
         </div>
+
+        {/* Reviews */}
+        <section className="mt-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold">Reviews</h2>
+            {listingReviews.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {listingReviews.length} {listingReviews.length === 1 ? 'review' : 'reviews'}
+              </p>
+            )}
+          </div>
+          <ReviewsList
+            reviews={listingReviews}
+            emptyMessage="No reviews for this listing yet."
+          />
+        </section>
       </main>
     </div>
   )

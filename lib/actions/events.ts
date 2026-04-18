@@ -32,3 +32,11 @@ export async function trackShortView(shortId: string) {
 export async function trackShortClick(shortId: string, listingId?: string) {
   await trackEvent('SHORT_CLICK', { shortId, listingId })
 }
+
+export async function trackShortListingView(shortId: string, listingId: string) {
+  await trackEvent('SHORT_LISTING_VIEW', { shortId, listingId })
+}
+
+export async function trackShortListingClick(shortId: string, listingId: string) {
+  await trackEvent('SHORT_LISTING_CLICK', { shortId, listingId })
+}

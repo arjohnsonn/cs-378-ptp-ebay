@@ -1,24 +1,14 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { ShortsFeed } from '@/components/shorts-feed'
+import { getShorts } from '@/lib/actions/shorts'
 import type { ShortWithListing } from '@/lib/types/database'
 
 export default async function ShortsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: shorts } = await supabase
-    .from('shorts')
-    .select(`
-      *,
-      listing:listings!shorts_target_listing_id_fkey(
-        *,
-        images:listing_images(*)
-      ),
-      creator:profiles(*)
-    `)
-    .order('created_at', { ascending: false })
-    .limit(20)
+  const shorts = (await getShorts(20)) as ShortWithListing[]
 
   return (
     <div className="h-screen bg-black flex">
@@ -95,7 +85,7 @@ export default async function ShortsPage() {
           </Link>
         </div>
 
-        <ShortsFeed shorts={(shorts || []) as ShortWithListing[]} />
+        <ShortsFeed shorts={shorts} />
       </main>
     </div>
   )

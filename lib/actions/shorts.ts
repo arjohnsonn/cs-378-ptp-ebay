@@ -2,9 +2,18 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import type { ShortTargetType } from '@/lib/types/database'
+
+const pinSchema = z.object({
+  listingId: z.string().uuid(),
+  startSeconds: z.number().min(0).nullable().optional(),
+  endSeconds: z.number().min(0).nullable().optional(),
+  label: z.string().max(60).nullable().optional(),
+}).refine(
+  (p) => p.endSeconds == null || p.startSeconds == null || p.endSeconds > p.startSeconds,
+  { message: 'End must be after start' }
+)
 
 const shortSchema = z.object({
   caption: z.string().max(500).optional(),
@@ -66,7 +75,7 @@ export async function createShort(formData: FormData) {
 
   revalidatePath('/sell/shorts')
   revalidatePath('/shorts')
-  redirect('/sell/shorts')
+  return { id: data.id }
 }
 
 export async function deleteShort(id: string) {
@@ -124,19 +133,28 @@ export async function uploadVideo(file: File) {
   return { url: publicUrl }
 }
 
+const shortSelect = `
+  *,
+  listing:listings!shorts_target_listing_id_fkey(
+    *,
+    images:listing_images(*)
+  ),
+  creator:profiles(*),
+  pinned_listings:short_listings(
+    *,
+    listing:listings(
+      *,
+      images:listing_images(*)
+    )
+  )
+`
+
 export async function getShorts(limit = 20) {
   const supabase = await createClient()
 
   const { data, error } = await supabase
     .from('shorts')
-    .select(`
-      *,
-      listing:listings!shorts_target_listing_id_fkey(
-        *,
-        images:listing_images(*)
-      ),
-      creator:profiles(*)
-    `)
+    .select(shortSelect)
     .order('created_at', { ascending: false })
     .limit(limit)
 
@@ -152,14 +170,7 @@ export async function getShort(id: string) {
 
   const { data, error } = await supabase
     .from('shorts')
-    .select(`
-      *,
-      listing:listings!shorts_target_listing_id_fkey(
-        *,
-        images:listing_images(*)
-      ),
-      creator:profiles(*)
-    `)
+    .select(shortSelect)
     .eq('id', id)
     .single()
 
@@ -168,6 +179,70 @@ export async function getShort(id: string) {
   }
 
   return data
+}
+
+export async function setShortListings(
+  shortId: string,
+  pins: Array<{
+    listingId: string
+    startSeconds?: number | null
+    endSeconds?: number | null
+    label?: string | null
+  }>
+): Promise<{ error?: string; success?: boolean }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: short } = await supabase
+    .from('shorts')
+    .select('creator_id')
+    .eq('id', shortId)
+    .single()
+
+  if (!short) return { error: 'Short not found' }
+  if (short.creator_id !== user.id) return { error: 'Not authorized' }
+
+  const validated: Array<z.infer<typeof pinSchema>> = []
+  for (const pin of pins) {
+    const parsed = pinSchema.safeParse(pin)
+    if (!parsed.success) return { error: parsed.error.issues[0].message }
+    validated.push(parsed.data)
+  }
+
+  const seen = new Set<string>()
+  for (const p of validated) {
+    if (seen.has(p.listingId)) return { error: 'Each listing can only be pinned once' }
+    seen.add(p.listingId)
+  }
+
+  const { error: deleteErr } = await supabase
+    .from('short_listings')
+    .delete()
+    .eq('short_id', shortId)
+
+  if (deleteErr) return { error: deleteErr.message }
+
+  if (validated.length > 0) {
+    const { error: insertErr } = await supabase
+      .from('short_listings')
+      .insert(
+        validated.map((p, i) => ({
+          short_id: shortId,
+          listing_id: p.listingId,
+          start_seconds: p.startSeconds ?? null,
+          end_seconds: p.endSeconds ?? null,
+          label: p.label ?? null,
+          position: i,
+        }))
+      )
+
+    if (insertErr) return { error: insertErr.message }
+  }
+
+  revalidatePath(`/sell/shorts`)
+  revalidatePath('/shorts')
+  return { success: true }
 }
 
 export async function incrementShortView(shortId: string) {

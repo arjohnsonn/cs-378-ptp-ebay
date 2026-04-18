@@ -1,7 +1,12 @@
 export type ListingStatus = 'DRAFT' | 'ACTIVE' | 'SOLD' | 'ARCHIVED'
 export type OrderStatus = 'PENDING' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
 export type ShortTargetType = 'LISTING' | 'EXTERNAL'
-export type EventType = 'SHORT_VIEW' | 'SHORT_CLICK' | 'PURCHASE_SUCCESS'
+export type EventType =
+  | 'SHORT_VIEW'
+  | 'SHORT_CLICK'
+  | 'PURCHASE_SUCCESS'
+  | 'SHORT_LISTING_VIEW'
+  | 'SHORT_LISTING_CLICK'
 export type ListingCategory = 'electronics' | 'fashion' | 'home' | 'sports' | 'collectibles' | 'art' | 'books' | 'music' | 'toys' | 'other'
 export type ListingCondition = 'new' | 'like_new' | 'good' | 'fair' | 'poor'
 export type OfferStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'WITHDRAWN' | 'COUNTERED' | 'EXPIRED' | 'ACCEPTED_PAID'
@@ -106,9 +111,56 @@ export interface ListingWithImages extends Listing {
   seller?: Profile
 }
 
+export interface Review {
+  id: string
+  order_id: string
+  listing_id: string
+  buyer_id: string
+  seller_id: string
+  rating: number
+  body: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ReviewImage {
+  id: string
+  review_id: string
+  url: string
+  position: number
+  created_at: string
+}
+
+export interface ReviewWithDetails extends Review {
+  images?: ReviewImage[]
+  buyer?: Profile
+}
+
+export interface SellerRating {
+  seller_id: string
+  rating_avg: number
+  rating_count: number
+}
+
+export interface ShortListing {
+  id: string
+  short_id: string
+  listing_id: string
+  start_seconds: number | null
+  end_seconds: number | null
+  label: string | null
+  position: number
+  created_at: string
+}
+
+export interface ShortListingWithListing extends ShortListing {
+  listing?: ListingWithImages
+}
+
 export interface ShortWithListing extends Short {
   listing?: ListingWithImages | null
   creator?: Profile
+  pinned_listings?: ShortListingWithListing[]
 }
 
 export type Database = {
@@ -148,6 +200,21 @@ export type Database = {
         Row: Offer
         Insert: Omit<Offer, 'id' | 'status' | 'created_at' | 'updated_at'> & { status?: OfferStatus }
         Update: Partial<Omit<Offer, 'id' | 'listing_id' | 'buyer_id' | 'seller_id' | 'created_at'>>
+      }
+      short_listings: {
+        Row: ShortListing
+        Insert: Omit<ShortListing, 'id' | 'created_at'>
+        Update: Partial<Omit<ShortListing, 'id' | 'short_id' | 'created_at'>>
+      }
+      reviews: {
+        Row: Review
+        Insert: Omit<Review, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Pick<Review, 'rating' | 'body'>>
+      }
+      review_images: {
+        Row: ReviewImage
+        Insert: Omit<ReviewImage, 'id' | 'created_at'>
+        Update: Partial<Omit<ReviewImage, 'id' | 'review_id' | 'created_at'>>
       }
     }
     Enums: {

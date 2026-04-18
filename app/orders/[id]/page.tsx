@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ReviewForm } from '@/components/review-form'
+import { getReviewForOrder } from '@/lib/actions/reviews'
+import type { ReviewImage } from '@/lib/types/database'
 
 interface OrderPageProps {
   params: Promise<{ id: string }>
@@ -35,6 +38,20 @@ export default async function OrderDetailPage({ params }: OrderPageProps) {
   const image = listing?.images?.[0]?.url
 
   const isBuyer = order.buyer_id === user!.id
+  const reviewableStatuses = ['PAID', 'SHIPPED', 'DELIVERED']
+  const canReview = isBuyer && reviewableStatuses.includes(order.status)
+
+  const existingReview = canReview ? await getReviewForOrder(order.id) : null
+  let existingWithImages: (typeof existingReview & { images?: ReviewImage[] }) | null = null
+  if (existingReview) {
+    const supabaseForImages = await createClient()
+    const { data: images } = await supabaseForImages
+      .from('review_images')
+      .select('*')
+      .eq('review_id', existingReview.id)
+      .order('position', { ascending: true })
+    existingWithImages = { ...existingReview, images: (images || []) as ReviewImage[] }
+  }
 
   return (
     <div className="min-h-screen">
@@ -95,6 +112,15 @@ export default async function OrderDetailPage({ params }: OrderPageProps) {
             </div>
           </CardContent>
         </Card>
+
+        {canReview && (
+          <div className="mt-6 space-y-3">
+            <h2 className="text-xl font-semibold">
+              {existingWithImages ? 'Your review' : 'Write a review'}
+            </h2>
+            <ReviewForm orderId={order.id} existing={existingWithImages} />
+          </div>
+        )}
       </main>
     </div>
   )
