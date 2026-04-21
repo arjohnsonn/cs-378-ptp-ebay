@@ -11,6 +11,8 @@ import { StarRating } from '@/components/star-rating'
 import { getCategoryBySlug, getConditionBySlug } from '@/lib/constants/categories'
 import { getOfferThreadForBuyer, getPendingOffersForSeller } from '@/lib/actions/offers'
 import { getReviewsForListing, getSellerRating } from '@/lib/actions/reviews'
+import { isListingWatched } from '@/lib/actions/watchlist'
+import { WatchButton } from '@/components/watch-button'
 import { ArrowLeft, Tag, Sparkles, User, Calendar, Shield } from 'lucide-react'
 import type { ListingImage, Profile, ListingCategory, ListingCondition, Offer } from '@/lib/types/database'
 
@@ -54,9 +56,10 @@ export default async function ListingPage({ params, searchParams }: ListingPageP
 
   const sellerOffers: Offer[] = isOwner ? await getPendingOffersForSeller(listing.id) : []
 
-  const [listingReviews, sellerRating] = await Promise.all([
+  const [listingReviews, sellerRating, watched] = await Promise.all([
     getReviewsForListing(listing.id),
     getSellerRating(listing.seller_id),
+    !isOwner && user ? isListingWatched(listing.id) : Promise.resolve(false),
   ])
 
   const price = (listing.price_cents / 100).toFixed(2)
@@ -136,6 +139,12 @@ export default async function ListingPage({ params, searchParams }: ListingPageP
                     isAuthenticated={!!user}
                   />
                 )}
+                <WatchButton
+                  listingId={listing.id}
+                  initialWatched={watched}
+                  isAuthenticated={!!user}
+                  variant="full"
+                />
               </div>
             )}
 

@@ -21,9 +21,11 @@ interface HomeContentProps {
   listings: ListingWithImages[] | null
   randomShort: ShortWithListing | null
   user: UserInfo | null
+  watchedListingIds?: string[]
 }
 
-export function HomeContent({ listings, randomShort, user }: HomeContentProps) {
+export function HomeContent({ listings, randomShort, user, watchedListingIds = [] }: HomeContentProps) {
+  const watchedSet = new Set(watchedListingIds)
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -200,7 +202,12 @@ export function HomeContent({ listings, randomShort, user }: HomeContentProps) {
                   ease: [0.25, 0.4, 0.25, 1]
                 }}
               >
-                <ListingCard listing={listing} />
+                <ListingCard
+                  listing={listing}
+                  showWatchButton
+                  watched={watchedSet.has(listing.id)}
+                  isAuthenticated={!!user}
+                />
               </motion.div>
             ))}
           </div>

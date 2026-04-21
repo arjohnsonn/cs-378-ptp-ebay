@@ -142,6 +142,17 @@ export interface SellerRating {
   rating_count: number
 }
 
+export interface WatchlistItem {
+  id: string
+  user_id: string
+  listing_id: string
+  created_at: string
+}
+
+export interface WatchlistItemWithListing extends WatchlistItem {
+  listing: ListingWithImages
+}
+
 export interface ShortListing {
   id: string
   short_id: string
@@ -215,6 +226,11 @@ export type Database = {
         Row: ReviewImage
         Insert: Omit<ReviewImage, 'id' | 'created_at'>
         Update: Partial<Omit<ReviewImage, 'id' | 'review_id' | 'created_at'>>
+      }
+      watchlist_items: {
+        Row: WatchlistItem
+        Insert: Omit<WatchlistItem, 'id' | 'created_at'>
+        Update: never
       }
     }
     Enums: {

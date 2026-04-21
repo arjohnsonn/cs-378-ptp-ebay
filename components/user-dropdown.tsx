@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { User, Package, Store, LogOut } from 'lucide-react'
+import { User, Package, Store, LogOut, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -36,6 +36,12 @@ export function UserDropdown({ email, displayName, avatarUrl }: UserDropdownProp
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem asChild>
+          <Link href="/watchlist" className="flex items-center gap-2 cursor-pointer">
+            <Heart className="w-4 h-4" />
+            Watchlist
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/orders" className="flex items-center gap-2 cursor-pointer">
             <Package className="w-4 h-4" />

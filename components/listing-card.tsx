@@ -2,14 +2,24 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ImageIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { WatchButton } from '@/components/watch-button'
 import type { ListingWithImages } from '@/lib/types/database'
 
 interface ListingCardProps {
   listing: ListingWithImages
   href?: string
+  showWatchButton?: boolean
+  watched?: boolean
+  isAuthenticated?: boolean
 }
 
-export function ListingCard({ listing, href }: ListingCardProps) {
+export function ListingCard({
+  listing,
+  href,
+  showWatchButton,
+  watched = false,
+  isAuthenticated = false,
+}: ListingCardProps) {
   const imageUrl = listing.images?.[0]?.url
   const price = (listing.price_cents / 100).toFixed(2)
   const linkHref = href || `/listing/${listing.id}`
@@ -17,6 +27,14 @@ export function ListingCard({ listing, href }: ListingCardProps) {
   return (
     <Link href={linkHref} className="group block">
       <div className="relative overflow-hidden rounded-2xl bg-card border border-border/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1">
+        {showWatchButton && (
+          <WatchButton
+            listingId={listing.id}
+            initialWatched={watched}
+            isAuthenticated={isAuthenticated}
+          />
+        )}
+
         {/* Image */}
         <div className="aspect-square relative bg-secondary/30 overflow-hidden">
           {imageUrl ? (

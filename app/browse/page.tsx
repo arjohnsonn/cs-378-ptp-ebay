@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { ListingCard } from '@/components/listing-card'
+import { getWatchedListingIds } from '@/lib/actions/watchlist'
 import { Filters, FilterTags } from '@/components/filters'
 import { SortSelect } from '@/components/sort-select'
 import { Button } from '@/components/ui/button'
@@ -70,6 +71,9 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   }
 
   const { data: listings } = await query.limit(50)
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const watchedIds = user ? await getWatchedListingIds() : new Set<string>()
 
   return (
     <div className="min-h-screen bg-background">
@@ -207,7 +211,13 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
             ) : (
               <div className="grid gap-4 sm:gap-6 grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {listings.map((listing) => (
-                  <ListingCard key={listing.id} listing={listing as ListingWithImages} />
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing as ListingWithImages}
+                    showWatchButton
+                    watched={watchedIds.has(listing.id)}
+                    isAuthenticated={!!user}
+                  />
                 ))}
               </div>
             )}

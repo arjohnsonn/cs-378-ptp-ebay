@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { HomeContent } from '@/components/home-content'
+import { getWatchedListingIds } from '@/lib/actions/watchlist'
 import type { ListingWithImages, ShortWithListing } from '@/lib/types/database'
 
 export default async function HomePage() {
@@ -46,11 +47,14 @@ export default async function HomePage() {
     avatarUrl: profile?.avatar_url,
   } : null
 
+  const watchedIds = user ? await getWatchedListingIds() : new Set<string>()
+
   return (
     <HomeContent
       listings={listings as ListingWithImages[] | null}
       randomShort={randomShort}
       user={userInfo}
+      watchedListingIds={Array.from(watchedIds)}
     />
   )
 }

@@ -52,6 +52,9 @@ export async function Header() {
                   <Link href="/sell">Seller Dashboard</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
+                  <Link href="/watchlist">Watchlist</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
                   <Link href="/orders">My Orders</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
